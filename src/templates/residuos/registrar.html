@@ -1,0 +1,8 @@
+{% extends 'base.html' %}{% block titulo %}Registrar pesaje · EcoMetrics{% endblock %}{% block contenido %}
+<p class="supertitulo">{{ user.sede.nombre }}</p><h1>Registrar pesaje</h1><p class="texto-secundario">Completa el registro del residuo generado.</p>
+<form method="post" class="formulario-pesaje">{% csrf_token %}{{ form.operacion }}{% if form.non_field_errors or form.operacion.errors %}<div class="error" role="alert">{{ form.non_field_errors }}{{ form.operacion.errors }}</div>{% endif %}
+<fieldset><legend>Categoría del residuo</legend><div class="categorias">{% for radio in form.categoria %}<label class="categoria">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}</div>{{ form.categoria.errors }}</fieldset>
+<div class="campo-grupo"><label for="{{ form.peso_kg.id_for_label }}">Peso neto <span class="texto-secundario">(kg)</span></label>{{ form.peso_kg }}<small>Hasta dos decimales. Ejemplo: 12.50</small>{{ form.peso_kg.errors }}</div>
+<div class="campo-grupo"><label for="{{ form.fecha_generacion.id_for_label }}">Fecha de generación</label>{{ form.fecha_generacion }}{{ form.fecha_generacion.errors }}</div>
+<div class="campo-grupo"><label for="{{ form.observacion.id_for_label }}">Observación <span class="texto-secundario">(opcional)</span></label>{{ form.observacion }}{{ form.observacion.errors }}</div>
+<p class="ayuda">El registro quedará asociado a tu usuario y a {{ user.sede.nombre }}.</p><button class="primario ancho" type="submit">Guardar pesaje</button></form>{% endblock %}

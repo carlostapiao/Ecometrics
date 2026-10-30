@@ -1,0 +1,15 @@
+{% extends 'base.html' %}{% block titulo %}Pesaje #{{ pesaje.pk }} · EcoMetrics{% endblock %}{% block contenido %}
+<p class="supertitulo">Registro #{{ pesaje.pk }} · Versión {{ pesaje.version }}</p><h1>Detalle del pesaje</h1>
+{% if pesaje.anulado %}<p class="aviso-anulado" role="status"><strong>Pesaje anulado.</strong> Se conserva para consulta y no suma en los indicadores.</p>{% endif %}
+<section class="detalle"><span class="chip {{ pesaje.categoria.grupo }}">{{ pesaje.categoria.nombre }}</span><p class="peso-detalle">{{ pesaje.peso_kg|floatformat:2 }} <small>kg</small></p><dl><dt>Sede</dt><dd>{{ pesaje.sede.nombre }}</dd><dt>Fecha de generación</dt><dd>{{ pesaje.fecha_generacion|date:"d/m/Y" }}</dd><dt>Registrado por</dt><dd>{{ pesaje.autor.get_full_name|default:pesaje.autor.username }}</dd><dt>Guardado el</dt><dd>{{ pesaje.creado_en|date:"d/m/Y H:i" }} (Lima)</dd><dt>Observación</dt><dd>{{ pesaje.observacion|default:"Sin observación" }}</dd></dl></section>
+{% if user.rol == 'gerente' and not pesaje.anulado %}<div class="acciones"><a class="primario" href="{% url 'corregir_pesaje' pesaje.pk %}">Corregir pesaje</a><a class="secundario peligro" href="{% url 'anular_pesaje' pesaje.pk %}">Anular pesaje</a></div>{% endif %}
+<section class="trazabilidad"><h2>Trazabilidad</h2>{% for evento in pesaje.eventos.all %}<article class="evento"><h3>{% if evento.accion == 'correccion' %}Corrección{% elif evento.accion == 'anulacion' %}Anulación{% else %}Registro creado{% endif %}</h3><p>{{ evento.actor.get_full_name|default:evento.actor.username }} · {{ evento.ocurrido_en|date:"d/m/Y H:i" }} (Lima)</p>
+{% if evento.motivo %}<p><strong>Motivo:</strong> {{ evento.motivo }}</p>{% endif %}
+{% if evento.datos.antes %}<div class="tabla-scroll"><table class="cambios"><thead><tr><th scope="col">Campo</th><th scope="col">Antes</th><th scope="col">Después</th></tr></thead><tbody>
+<tr><th scope="row">Peso (kg)</th><td>{{ evento.datos.antes.peso_kg }}</td><td>{{ evento.datos.despues.peso_kg }}</td></tr>
+<tr><th scope="row">Categoría</th><td>{{ evento.datos.antes.categoria_nombre }}</td><td>{{ evento.datos.despues.categoria_nombre }}</td></tr>
+<tr><th scope="row">Fecha de generación</th><td>{{ evento.datos.antes.fecha_generacion }}</td><td>{{ evento.datos.despues.fecha_generacion }}</td></tr>
+<tr><th scope="row">Observación</th><td>{{ evento.datos.antes.observacion|default:"Sin observación" }}</td><td>{{ evento.datos.despues.observacion|default:"Sin observación" }}</td></tr>
+<tr><th scope="row">Estado</th><td>{{ evento.datos.antes.anulado|yesno:"Anulado,Vigente" }}</td><td>{{ evento.datos.despues.anulado|yesno:"Anulado,Vigente" }}</td></tr>
+</tbody></table></div>{% else %}<p>{{ evento.datos.peso_kg }} kg · {{ evento.datos.categoria }} · {{ evento.datos.fecha_generacion }}</p><p>{{ evento.datos.observacion }}</p>{% endif %}</article>{% endfor %}</section>
+<a class="secundario" href="{% if user.rol == 'gerente' %}{% url 'pesajes_gerencia' %}{% else %}{% url 'historial' %}{% endif %}">Volver a {% if user.rol == 'gerente' %}pesajes{% else %}mi historial{% endif %}</a>{% endblock %}

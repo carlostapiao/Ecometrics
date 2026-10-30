@@ -1,0 +1,23 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EcoMetrics · Base de desarrollo</title>
+  <link rel="stylesheet" href="{% static 'inicio.css' %}">
+</head>
+<body>
+  <header><a class="marca" href="/">EcoMetrics<span>Registro y seguimiento de residuos</span></a><span class="entorno">Entorno local</span></header>
+  <main>
+    <section class="presentacion">
+      <div><p class="contexto">Proyecto piloto</p><h1>Cada registro,<br>una operación trazable.</h1><p class="descripcion">Un espacio para registrar residuos por sede y consultar información consistente.</p></div>
+      <div class="simbolo" aria-hidden="true"><span>kg</span><div></div></div>
+    </section>
+    <section class="estado" aria-labelledby="titulo-estado"><div><h2 id="titulo-estado">Base de desarrollo</h2><p>Todavía no se registran pesajes. La aplicación se está preparando para el primer flujo operativo.</p></div><span class="etapa">Preparación</span></section>
+    <section class="alcance" aria-label="Alcance del piloto"><article><h3>Pesaje manual</h3><p>Kilogramos con dos decimales y registro por operario.</p></article><article><h3>Trazabilidad</h3><p>Autoría y seguimiento de correcciones y anulaciones.</p></article><article><h3>Visión multisede</h3><p>Información compartida con permisos según el rol.</p></article></section>
+    <p class="nota">EcoMetrics · Gestión y trazabilidad de residuos.</p>
+  </main>
+  <footer>EcoMetrics <span>Residuos no peligrosos</span></footer>
+</body>
+</html>

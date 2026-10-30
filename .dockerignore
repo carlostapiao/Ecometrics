@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+**/.npmrc
+.git
+.venv
+**/__pycache__
+**/*.pyc
+*.md
+scripts
+output
+.private
+**/.private
+evidencias

@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block titulo %}Revisar activación · EcoMetrics{% endblock %}{% block contenido %}<h1>No se completó la operación</h1>{% for error in errores %}<p class="error" role="alert">{{ error }}</p>{% endfor %}<a class="secundario" href="{% url 'personal_editar' persona.pk %}">Volver a la ficha</a>{% endblock %}

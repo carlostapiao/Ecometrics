@@ -1,0 +1,11 @@
+{% extends 'base.html' %}{% block titulo %}{% if anular %}Anular{% else %}Corregir{% endif %} pesaje · EcoMetrics{% endblock %}{% block contenido %}
+<div class="edicion"><p class="supertitulo">Registro #{{ pesaje.pk }} · {{ pesaje.sede.nombre }}</p><h1>{% if anular %}Anular{% else %}Corregir{% endif %} pesaje</h1>
+{% if pesaje.anulado %}<p class="aviso-anulado">Este pesaje está anulado y no admite más cambios.</p>
+{% else %}<p class="texto-secundario">{% if anular %}El registro dejará de sumar en los indicadores. Su información y su historial se conservarán.{% else %}El autor y la sede originales se conservan. Los cambios quedarán en el historial con tu usuario y el motivo.{% endif %}</p>
+{% if anular %}<p class="detalle">{{ pesaje.categoria.nombre }} · <strong>{{ pesaje.peso_kg|floatformat:2 }} kg</strong> · {{ pesaje.fecha_generacion|date:"d/m/Y" }}</p>{% endif %}
+<form method="post">{% csrf_token %}{{ form.version }}{% if form.non_field_errors or form.version.errors %}<div class="error" role="alert">{{ form.non_field_errors }}{{ form.version.errors }}</div>{% endif %}
+{% if not anular %}<fieldset><legend>Categoría del residuo</legend><div class="categorias">{% for radio in form.categoria %}<label class="categoria">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}</div>{{ form.categoria.errors }}</fieldset>
+<div class="campo-grupo">{{ form.peso_kg.label_tag }}{{ form.peso_kg }}{{ form.peso_kg.errors }}</div><div class="campo-grupo">{{ form.fecha_generacion.label_tag }}{{ form.fecha_generacion }}{{ form.fecha_generacion.errors }}</div><div class="campo-grupo">{{ form.observacion.label_tag }}{{ form.observacion }}{{ form.observacion.errors }}</div>{% endif %}
+<div class="campo-grupo">{{ form.motivo.label_tag }}{{ form.motivo }}{{ form.motivo.errors }}</div>
+{% if anular %}<div class="campo-grupo confirmacion">{{ form.confirmar }}{{ form.confirmar.label_tag }}{{ form.confirmar.errors }}</div>{% endif %}
+<div class="acciones"><button class="primario {% if anular %}peligro{% endif %}" type="submit">{% if anular %}Confirmar anulación{% else %}Guardar corrección{% endif %}</button><a class="secundario" href="{% url 'detalle_pesaje' pesaje.pk %}">Cancelar</a></div></form>{% endif %}</div>{% endblock %}

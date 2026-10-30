@@ -1,0 +1,9 @@
+<form method="get" class="filtros filtros-gerencia">
+{% if filtros.tipo %}<div class="campo-tipo"><label for="{{ filtros.tipo.id_for_label }}">Tipo de reporte</label>{{ filtros.tipo }}{{ filtros.tipo.errors }}</div>{% endif %}
+<div class="campo-sede"><label for="sede">Sede</label><select name="sede" id="sede"><option value="">Todas las sedes</option>{% for sede in sedes %}<option value="{{ sede.pk }}" {% if sede_id == sede.pk|stringformat:'s' %}selected{% endif %}>{{ sede.nombre }}</option>{% endfor %}</select>{{ filtros.sede.errors }}</div>
+<div><label for="{{ filtros.desde.id_for_label }}">Desde</label>{{ filtros.desde }}{{ filtros.desde.errors }}</div>
+<div><label for="{{ filtros.hasta.id_for_label }}">Hasta</label>{{ filtros.hasta }}{{ filtros.hasta.errors }}</div>
+<div class="campo-categoria"><label for="{{ filtros.categoria.id_for_label }}">Categoría</label>{{ filtros.categoria }}{{ filtros.categoria.errors }}</div>
+{% if filtros.estado %}<div class="campo-estado" {% if tipo == 'generacion' %}hidden{% endif %}><label for="{{ filtros.estado.id_for_label }}">Estado</label>{{ filtros.estado }}{{ filtros.estado.errors }}</div>{% endif %}{% if filtros.buscar %}<div class="busqueda"><label for="{{ filtros.buscar.id_for_label }}">Buscar</label>{{ filtros.buscar }}{{ filtros.buscar.errors }}</div>{% endif %}
+<div class="botones-filtros"><button class="primario" type="submit">Aplicar filtros</button><a class="limpiar" href="{% if seccion == 'dashboard' %}{% url 'resumen' %}{% elif seccion == 'pesajes' %}{% url 'pesajes_gerencia' %}{% else %}{% url 'reportes' %}{% endif %}">Limpiar</a></div>
+{% if filtros.non_field_errors %}<div class="errores-filtros" role="alert">{{ filtros.non_field_errors }}</div>{% endif %}</form>

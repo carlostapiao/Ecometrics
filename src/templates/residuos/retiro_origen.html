@@ -1,0 +1,1 @@
+<div class="fila-origen">{% for campo in fila %}<div class="campo-grupo {% if campo.name == 'DELETE' %}confirmacion{% endif %}">{% if campo.name == 'DELETE' %}<label for="{{ campo.id_for_label }}">Excluir este origen</label>{% else %}{{ campo.label_tag }}{% endif %}{{ campo }}{{ campo.errors }}</div>{% endfor %}</div>
