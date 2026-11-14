@@ -135,14 +135,20 @@ jobs:
             --name "${{ vars.CONTAINER_APP_NAME }}" \
             --server "${{ vars.ACR_LOGIN_SERVER }}" \
             --identity "$IDENTITY_ID"
-          az containerapp ingress update \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ vars.CONTAINER_APP_NAME }}" \
-            --target-port 8000
           az containerapp update \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --name "${{ vars.CONTAINER_APP_NAME }}" \
             --image "${{ vars.ACR_LOGIN_SERVER }}/ecometrics-web:${{ env.IMAGE_TAG }}"
+          CURRENT_PORT=$(az containerapp ingress show \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.CONTAINER_APP_NAME }}" \
+            --query targetPort -o tsv)
+          if [ "$CURRENT_PORT" != "8000" ]; then
+            az containerapp ingress update \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --name "${{ vars.CONTAINER_APP_NAME }}" \
+              --target-port 8000
+          fi
 
       - name: Verificar endpoints de salud y disponibilidad
         run: |
