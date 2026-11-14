@@ -2,3 +2,7 @@ Django==5.2.18
 psycopg[binary]==3.3.6
 asgiref==3.13.0
 sqlparse==0.6.0
+gunicorn==27.0.1
+whitenoise==6.12.0
+django-storages[azure]==1.14.6
+azure-storage-blob==12.31.1

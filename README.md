@@ -14,7 +14,7 @@ La raíz de trabajo es `C:/Carpeta de Carlos/Cerebro/projects/ecometrics/`. Las 
 
 ## Forma de trabajar
 
-El mismo agente puede analizar, implementar y verificar el incremento autorizado. No se exige pasar por planeador, auditor y ejecutor en turnos separados. El alcance inicial está en SPEC; solo se crea un subplan adicional cuando ayude a resolver una complejidad concreta.
+La metodología, incluida la revisión separada según el impacto del trabajo, se define en [AGENTS.md](../../AGENTS.md). El alcance está en SPEC y el avance y los pendientes en STATE; solo se crea un subplan adicional cuando ayude a resolver una complejidad concreta.
 
 ## Skills y herramientas
 
@@ -92,11 +92,11 @@ El dashboard muestra pesajes vigentes por sede y categoría, y evolución por fe
 
 ## Reportes gerenciales
 
-Abrir **Reportes**, aplicar sus filtros y elegir **Descargar CSV** o **Ver reporte imprimible**. Ambos incluyen todos los pesajes vigentes del filtro, independientemente de la paginación en Pesajes. Filtros inválidos impiden exportar. El acceso es exclusivo del gerente.
+Abrir **Reportes**, aplicar filtros de sede, categoría y fecha de generación y elegir **Descargar CSV** o **Ver reporte imprimible**. Ambos formatos incluyen todos los pesajes vigentes del filtro, independientemente de la paginación en Pesajes. Filtros inválidos impiden exportar. El acceso a los reportes es exclusivo del gerente.
 
-El CSV usa UTF-8 con BOM, coma como delimitador y punto decimal con dos posiciones. Incluye identidad, sede, fecha, categoría, peso, observación, fecha de registro y versión. Los textos que podrían interpretarse como fórmulas se prefijan con apóstrofo al exportar; el dato almacenado no cambia. Si Excel no detecta el delimitador automáticamente, importar como CSV UTF-8 delimitado por comas.
+El CSV usa UTF-8 con BOM, coma como delimitador y punto decimal con dos posiciones. El reporte de generación incluye identidad, sede, fecha, categoría, peso, observación, fecha de registro y versión. Los textos que podrían interpretarse como fórmulas se prefijan con apóstrofo al exportar; el dato almacenado no cambia. Si Excel no detecta el delimitador automáticamente, importar como CSV UTF-8 delimitado por comas.
 
-La vista imprimible muestra filtros, usuario, fecha de emisión, registros y total. En Chrome o Edge, **Imprimir o guardar PDF** abre la impresión del navegador: elegir guardar como PDF, A4 horizontal y revisar la vista previa. Se oculta la navegación y se repiten cabeceras de tabla. No hay generador PDF en el servidor. La vista previa de impresión no pudo verificarse en el navegador integrado durante esta sesión; el HTML y la descarga CSV sí fueron comprobados.
+La vista imprimible muestra filtros, usuario, fecha de emisión, registros y total. En Chrome o Edge, **Imprimir o guardar PDF** abre la impresión del navegador: elegir guardar como PDF, A4 horizontal y revisar la vista previa. Se oculta la navegación y se repiten cabeceras de tabla. No hay generador PDF en el servidor. Las verificaciones realizadas y los pendientes se consultan en [STATE.md](STATE.md).
 
 ## Sedes y Personal
 
@@ -112,34 +112,11 @@ Para cambiar sede o suspender/reactivar un operario, abrir **Gestionar personal*
 
 Los enlaces actuales usan el mismo origen de la aplicación local. Para abrir uno en este equipo con otra identidad, usar una ventana privada. El acceso desde otros dispositivos o fuera de la oficina requiere configurar un origen accesible y HTTPS; no se ha publicado la aplicación ni cambiado su exposición de red.
 
-## Retiros y conciliación
+## Alcance de la interfaz
 
-Desde **Conciliación → Registrar retiro**, seleccionar sede y categoría. Añadir entre uno y veinte pesajes de origen e indicar cuánto se retira de cada uno; la salida se calcula con esa suma. Se admite retirar una parte y dejar saldo para otra salida. El servidor comprueba el saldo nuevamente al guardar, incluso si dos gerentes trabajan a la vez.
+Operario: registrar pesajes y consultar el historial propio. Gerencia: Dashboard de generación, Sedes y plantas, Pesajes, Reportes CSV/HTML y Personal. Conciliación, Salidas y sus reportes y descargas ya no están disponibles, tampoco mediante las direcciones anteriores.
 
-El saldo se calcula con las cantidades de salida de retiros no anulados. Un peso distinto informado por el receptor queda como diferencia por revisar y no modifica silenciosamente las cantidades tomadas de los pesajes de origen.
-
-En el detalle del retiro:
-
-1. Registrar el peso confirmado por el receptor, fecha de recepción y referencia de su documento. La fecha no puede ser anterior a la salida ni futura; el peso confirmado admite cero.
-2. Adjuntar el respaldo en PDF, JPG o PNG (máximo 10 MB). Se valida extensión/cabecera y se conserva su huella SHA-256. Las descargas están protegidas por el rol gerencial; no hay una carpeta pública de archivos.
-3. Revisar **diferencia = recepción − salida**. Una diferencia negativa indica menor peso confirmado. El estado será Observado si no coincide.
-4. Pulsar **Cerrar conciliación**. Se exige recepción, referencia y un respaldo. Con diferencia, también una explicación. Coincidir en peso no cierra automáticamente la revisión.
-
-**Reabrir conciliación** requiere motivo y permite revisar recepción o añadir otro respaldo. **Anular retiro** conserva historia y libera sus cantidades asignadas; si ya está conciliado, se debe reabrir primero. No hay borrado físico desde estas pantallas. Cerrar una conciliación registra la revisión interna del gerente y no certifica el tratamiento ambiental.
-
-Un pesaje vinculado a retiros vigentes no puede anularse ni cambiar de categoría, reducirse por debajo de lo retirado o fecharse después de una salida. Primero se revisan sus retiros. El flujo móvil del operario no cambia.
-
-Los documentos se guardan en el volumen Compose `evidencias_data`, montado en `/data/evidencias` y accesible para el usuario de la aplicación. La base conserva metadatos y eventos. Para un respaldo completo hay que conservar ambos volúmenes; la persistencia por recreación no sustituye una copia de seguridad.
-
-El Dashboard y los reportes actuales siguen midiendo **generación registrada**. Los retiros y su recepción se consultan en Conciliación; su incorporación a indicadores y reportes diferenciados corresponde al siguiente incremento.
-
-## Indicadores y reportes de movimientos
-
-En **Dashboard**, el periodo se aplica por separado a la generación, la salida y la recepción. Un residuo generado un día, retirado otro y recibido después aparece en cada indicador según su fecha. Estas tres cantidades no representan necesariamente los mismos lotes.
-
-En **Reportes**, selecciona Residuos generados, Salidas de residuos o Recepciones confirmadas; elige sede, categoría y periodo, y pulsa **Aplicar filtros** antes de descargar CSV o abrir la vista imprimible. Para salidas y recepciones puedes filtrar el estado del retiro. Las salidas muestran el dato actual de recepción, aunque corresponda a otro periodo. En recepciones, la salida vinculada puede ser anterior al periodo elegido.
-
-La diferencia se calcula como peso recibido menos peso de salida únicamente de retiros con recepción. Los pendientes quedan vacíos en CSV; una recepción confirmada de cero conserva `0.00`. Anulados no suman. Las referencias y el número de respaldos acompañan el reporte; las descargas de documentos siguen dentro de Conciliación y requieren acceso gerencial. El reporte no constituye una certificación ASG.
+Los retiros, eventos y documentos existentes se conservan en la base y el almacén privado para proteger su integridad y recuperación. Sus restricciones sobre pesajes vinculados siguen vigentes; esos retiros no se pueden gestionar desde la interfaz retirada. No se recalculan como generación ni se eliminan sus asignaciones. Cualquier tratamiento posterior de esos datos requiere una decisión específica.
 
 ## Respaldo local y comprobación de recuperación
 
@@ -165,10 +142,6 @@ La restauración sobre una instalación de uso real requiere seleccionar explíc
 
 ## Revisión de impresión con varias páginas
 
-`scripts/preparar_impresion.py` renderiza las plantillas actuales con objetos temporales en memoria: 120 filas de generación y retiros/recepciones con textos largos. No crea cuentas ni registros de negocio. Los HTML autónomos se prepararon en `.private/revision-impresion/`; cada uno incluye los estilos reales de la aplicación. Son materiales técnicos para abrir en Chrome e imprimir con A4 horizontal.
+`scripts/preparar_impresion.py` se ejecuta mediante `manage.py shell` en el contenedor web y renderiza las plantillas con objetos temporales en memoria: 120 filas de generación con textos largos. No crea cuentas ni registros de negocio. Genera HTML autónomos en `/tmp/ecometrics-revision-impresion/` dentro del contenedor; cada uno incluye los estilos de la aplicación. Para revisarlos, copiarlos a una carpeta privada del equipo, abrirlos en Chrome e imprimir con A4 horizontal.
 
 La comprobación debe verificar cabeceras repetidas, filas y total finales, columnas completas y legibilidad. Tener el HTML o un PDF antiguo no acredita esa revisión; el resultado actual se registra en STATE.
-
-## Entregas desde el perfil operario
-
-En la barra inferior, Salidas abre los retiros propios. Registrar retiro permite seleccionar la sede asignada, la categoría y los pesajes propios con sus cantidades parciales. Después de entregar, abre el retiro para guardar el peso informado por el receptor y adjuntar PDF/JPG/PNG. La diferencia no cambia la generación registrada. Gerencia revisa el respaldo y cierra la conciliación desde su módulo. Reapertura y anulación son exclusivas de gerencia. Un operario no puede consultar ni utilizar pesajes o retiros de otro operario, incluso de la misma sede.

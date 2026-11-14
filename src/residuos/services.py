@@ -27,7 +27,7 @@ def modificar_pesaje(usuario, pesaje_id, datos, *, anular=False):
     total_retirado = asignaciones.aggregate(peso=Sum("peso_kg"))["peso"] or 0
     if total_retirado:
         if anular:
-            raise ValidationError("Este pesaje tiene retiros vinculados. Revisa y anula esos retiros antes de anular el pesaje.")
+            raise ValidationError("Este pesaje está vinculado a registros históricos protegidos y no puede anularse desde la interfaz actual.")
         primera_salida = asignaciones.order_by("retiro__fecha_salida").first().retiro.fecha_salida
         if datos["categoria"].pk != pesaje.categoria_id or datos["peso_kg"] < total_retirado or datos["fecha_generacion"] > primera_salida:
             raise ValidationError("La corrección no puede cambiar la categoría, reducir el peso por debajo de lo retirado ni dejar la generación después de una salida vinculada.")

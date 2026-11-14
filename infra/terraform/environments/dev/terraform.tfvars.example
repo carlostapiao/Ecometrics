@@ -1,0 +1,12 @@
+subscription_id         = "94846a8b-9491-4312-82bb-3082c340b45f"
+location                = "mexicocentral"
+region_code             = "mxc"
+project_name            = "ecom"
+environment             = "dev"
+postgres_admin_username = "ecomadmin"
+# Definir valores reales solo en terraform.tfvars (excluido de Git) o mediante TF_VAR_*
+postgres_admin_password = "REEMPLAZAR-EN-TFVARS"
+django_secret_key       = "REEMPLAZAR-EN-TFVARS"
+github_repository       = "carlostapiao/Ecometrics"
+github_branch           = "main"
+min_replicas            = 1

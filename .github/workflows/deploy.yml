@@ -1,0 +1,158 @@
+name: Verificar y desplegar EcoMetrics en Azure
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  verify:
+    name: Verificar pruebas Django contra PostgreSQL
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ecometrics
+          POSTGRES_USER: ecometrics
+          POSTGRES_PASSWORD: ci_postgres_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U ecometrics -d ecometrics"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Instalar dependencias
+        run: python -m pip install --no-cache-dir -r requirements.txt
+
+      - name: Verificar Django y migraciones
+        working-directory: src
+        env:
+          DJANGO_SECRET_KEY: ci-verification-only-secret-key-not-for-prod
+          DJANGO_DEBUG: "false"
+          POSTGRES_DB: ecometrics
+          POSTGRES_USER: ecometrics
+          POSTGRES_PASSWORD: ci_postgres_password
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: "5432"
+        run: |
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python manage.py test --noinput
+
+  deploy:
+    name: Construir imagen y desplegar en Azure Container Apps
+    runs-on: ubuntu-latest
+    needs: verify
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    env:
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.13 para migraciones
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Instalar dependencias Python
+        run: python -m pip install --no-cache-dir -r requirements.txt
+
+      - name: Iniciar sesión en Azure mediante OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Construir y publicar imagen en Azure Container Registry
+        run: |
+          az acr login --name "${{ vars.ACR_NAME }}"
+          IMAGE="${{ vars.ACR_LOGIN_SERVER }}/ecometrics-web:${{ env.IMAGE_TAG }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Habilitar firewall temporal en PostgreSQL para migraciones
+        run: |
+          RUNNER_IP=$(curl -fsS https://api4.ipify.org)
+          test -n "$RUNNER_IP"
+          az postgres flexible-server firewall-rule create \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --server-name "${{ vars.POSTGRES_SERVER_NAME }}" \
+            --name "ci-${{ github.run_id }}" \
+            --start-ip-address "$RUNNER_IP" \
+            --end-ip-address "$RUNNER_IP"
+
+      - name: Aplicar migraciones Django en PostgreSQL
+        working-directory: src
+        env:
+          DJANGO_SECRET_KEY: ci-migration-only-secret-key
+          POSTGRES_HOST: ${{ vars.POSTGRES_HOST }}
+          POSTGRES_PORT: "5432"
+          POSTGRES_DB: ${{ vars.POSTGRES_DB }}
+          POSTGRES_USER: ${{ vars.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+          POSTGRES_SSLMODE: require
+        run: python manage.py migrate --noinput
+
+      - name: Eliminar regla temporal de firewall en PostgreSQL
+        if: always()
+        run: |
+          az postgres flexible-server firewall-rule delete \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --server-name "${{ vars.POSTGRES_SERVER_NAME }}" \
+            --name "ci-${{ github.run_id }}" \
+            --yes || true
+
+      - name: Actualizar Container App e ingress en puerto 8000
+        run: |
+          az containerapp ingress update \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.CONTAINER_APP_NAME }}" \
+            --target-port 8000
+          az containerapp update \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.CONTAINER_APP_NAME }}" \
+            --image "${{ vars.ACR_LOGIN_SERVER }}/ecometrics-web:${{ env.IMAGE_TAG }}"
+
+      - name: Verificar endpoints de salud y disponibilidad
+        run: |
+          APP_URL="https://$(az containerapp show \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.CONTAINER_APP_NAME }}" \
+            --query "properties.configuration.ingress.fqdn" -o tsv)"
+          for i in $(seq 1 12); do
+            CODE_HEALTH=$(curl -s -o /dev/null -w "%{http_code}" "${APP_URL}/healthz")
+            CODE_READY=$(curl -s -o /dev/null -w "%{http_code}" "${APP_URL}/readyz")
+            echo "Intento $i: /healthz=$CODE_HEALTH /readyz=$CODE_READY"
+            if [ "$CODE_HEALTH" = "200" ] && [ "$CODE_READY" = "200" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "La aplicación no respondió 200 OK a tiempo en $APP_URL"
+          exit 1

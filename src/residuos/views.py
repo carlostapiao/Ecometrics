@@ -15,8 +15,8 @@ from django.views.decorators.http import require_http_methods, require_safe
 
 from cuentas.models import Sede
 from .forms import AnulacionForm, ConsultaPesajesForm, CorreccionForm, FiltrosForm, PesajeForm, ReporteForm
-from .models import Pesaje, Retiro
-from .consultas_movimientos import filtrar_generacion, filtrar_retiros, totales_movimientos
+from .models import Pesaje
+from .consultas_movimientos import filtrar_generacion
 from .services import modificar_pesaje, registrar_pesaje
 
 
@@ -114,9 +114,6 @@ def resumen(request):
     form, registros, sede_id = consulta_gerencial(request)
     vigentes = registros.filter(anulado=False)
     por_dia = list(vigentes.order_by().values("fecha_generacion").annotate(peso=Sum("peso_kg"), cantidad=Count("id")).order_by("fecha_generacion"))
-    datos = dict(form.cleaned_data, sede=sede_id) if form.is_valid() else {}
-    salidas = filtrar_retiros(datos) if form.is_valid() else Retiro.objects.none()
-    recepciones = filtrar_retiros(datos, fecha="fecha_confirmacion") if form.is_valid() else Retiro.objects.none()
     return render(request, "residuos/resumen.html", {
         **contexto_filtros(request, form, sede_id),
         "totales": vigentes.aggregate(peso=Sum("peso_kg"), cantidad=Count("id")),
@@ -124,11 +121,6 @@ def resumen(request):
         "por_sede": vigentes.order_by().values("sede__nombre").annotate(peso=Sum("peso_kg"), cantidad=Count("id")).order_by("sede__nombre"),
         "por_categoria": vigentes.order_by().values("categoria__nombre", "categoria__grupo").annotate(peso=Sum("peso_kg"), cantidad=Count("id")).order_by("categoria__nombre"),
         "por_dia": por_dia, "maximo_diario": max((fila["peso"] for fila in por_dia[-14:]), default=1),
-        "salidas": salidas.aggregate(peso=Sum("peso_salida"), cantidad=Count("id")),
-        "recepciones": recepciones.aggregate(peso=Sum("peso_confirmado"), cantidad=Count("id")),
-        "por_revisar": salidas.filter(estado__in=[Retiro.Estado.PENDIENTE, Retiro.Estado.OBSERVADO]).count(),
-        "observados": salidas.filter(estado=Retiro.Estado.OBSERVADO).count(),
-        "sin_recepcion": salidas.filter(peso_confirmado__isnull=True).count(),
         "seccion": "dashboard",
     })
 
@@ -169,19 +161,10 @@ def centro_reportes(request):
     sede = datos.get("sede")
     sede_id = str(sede.pk) if sede else ""
     contexto = contexto_filtros(request, form, sede_id)
-    if tipo == "generacion":
-        registros = filtrar_generacion(datos, incluir_anulados=True) if valido else Pesaje.objects.none()
-        contexto.update({"totales": registros.filter(anulado=False).aggregate(peso=Sum("peso_kg"), cantidad=Count("id")),
-                         "anulados": registros.filter(anulado=True).count(),
-                         "url_csv": reverse("reporte_csv"), "url_imprimir": reverse("reporte_imprimible")})
-    else:
-        fecha = "fecha_confirmacion" if tipo == "recepciones" else "fecha_salida"
-        registros = filtrar_retiros(datos, fecha=fecha) if valido else Retiro.objects.none()
-        resumen_movimientos = totales_movimientos(registros)
-        contexto.update({"movimientos": resumen_movimientos,
-                         "totales": {"peso": resumen_movimientos["confirmado" if tipo == "recepciones" else "salida"], "cantidad": resumen_movimientos["cantidad"]},
-                         "url_csv": reverse("movimientos_csv", kwargs={"tipo": tipo}),
-                         "url_imprimir": reverse("movimientos_imprimible", kwargs={"tipo": tipo})})
+    registros = filtrar_generacion(datos, incluir_anulados=True) if valido else Pesaje.objects.none()
+    contexto.update({"totales": registros.filter(anulado=False).aggregate(peso=Sum("peso_kg"), cantidad=Count("id")),
+                     "anulados": registros.filter(anulado=True).count(),
+                     "url_csv": reverse("reporte_csv"), "url_imprimir": reverse("reporte_imprimible")})
     contexto.update({"seccion": "reportes", "puede_exportar": valido, "tipo": tipo})
     return render(request, "residuos/reportes.html", contexto)
 

@@ -3,12 +3,15 @@
 !.env.example
 **/.npmrc
 .git
+.github
 .venv
 **/__pycache__
 **/*.pyc
 *.md
 scripts
 output
+infra
+specs
 .private
 **/.private
 evidencias

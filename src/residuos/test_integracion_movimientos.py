@@ -53,25 +53,7 @@ class IntegracionMovimientosTests(TestCase):
         datos.update(cambios)
         return datos
 
-    def csv(self, nombre_tipo, **filtros):
-        response = self.client.get(reverse("movimientos_csv", kwargs={"tipo": nombre_tipo}), filtros)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response["Cache-Control"], "private, no-store")
-        return list(csv.reader(io.StringIO(response.content.decode("utf-8-sig"))))
 
-    def test_dashboard_fecha_de_cada_indicador_y_anulados_excluidos(self):
-        for fecha, generado, salido, recibido in ((self.generacion, "100.00", None, None),
-                (self.salida, None, "55.00", None), (self.hoy, None, None, "18.50")):
-            with self.subTest(fecha=fecha):
-                response = self.client.get(reverse("resumen"), self.filtros(desde=fecha, hasta=fecha))
-                self.assertEqual(response.status_code, 200)
-                for clave, esperado in (("totales", generado), ("salidas", salido), ("recepciones", recibido)):
-                    self.assertEqual(response.context[clave]["peso"], Decimal(esperado) if esperado else None)
-        response = self.client.get(reverse("resumen"), self.filtros(desde=self.salida, hasta=self.salida))
-        self.assertEqual(response.context["por_revisar"], 3)
-        self.assertEqual(response.context["observados"], 2)
-        self.assertEqual(response.context["sin_recepcion"], 1)
-        self.assertContains(response, "Por fecha de recepción")
 
     def test_diferencia_solo_confirmados_y_totales_consistentes(self):
         filas = filtrar_retiros({"sede": self.sede, "categoria": self.categoria})
@@ -89,81 +71,53 @@ class IntegracionMovimientosTests(TestCase):
         self.assertContains(response, reverse("reporte_csv"))
         self.assertEqual(self.client.get(reverse("reporte_csv"), self.filtros()).status_code, 200)
 
-    def test_centro_csv_html_coinciden_para_salidas_y_recepciones(self):
-        for tipo, fecha, peso, cantidad in (("retiros", self.salida, "55.00", 3), ("recepciones", self.hoy, "18.50", 2)):
-            with self.subTest(tipo=tipo):
-                datos = self.filtros(tipo=tipo, desde=fecha, hasta=fecha)
-                centro = self.client.get(reverse("reportes"), datos)
-                html = self.client.get(reverse("movimientos_imprimible", kwargs={"tipo": tipo}), datos)
-                rows = self.csv(tipo, **datos)[1:]
-                self.assertEqual(centro.context["totales"]["peso"], Decimal(peso))
-                self.assertEqual(len(rows), cantidad)
-                self.assertEqual(html.status_code, 200)
-                self.assertEqual(html.context["totales"], centro.context["movimientos"])
-                indice = 6 if tipo == "retiros" else 7
-                self.assertEqual(sum((Decimal(row[indice]) for row in rows), Decimal(0)), Decimal(peso))
-                self.assertEqual(html["Cache-Control"], "private, no-store")
-
-    def test_csv_pendiente_vacio_cero_explicito_y_documentos_no_duplican(self):
-        rows = {int(row[0]): row for row in self.csv("retiros", **self.filtros())[1:]}
-        self.assertEqual(len(rows), 3)
-        self.assertEqual(rows[self.pendiente.pk][7:9], ["", ""])
-        self.assertEqual(rows[self.cero.pk][7:9], ["0.00", "-5.00"])
-        self.assertEqual(rows[self.recibido.pk][7:9], ["18.50", "-1.50"])
-        self.assertEqual(rows[self.recibido.pk][11], "2")
-        html = self.client.get(reverse("movimientos_imprimible", kwargs={"tipo": "retiros"}), self.filtros())
-        self.assertContains(html, "Pendiente")
-        self.assertContains(html, "0,00")
-        self.assertNotContains(html, "retiros/informe-")
-
-    def test_filtros_estado_sede_categoria_y_limites_inclusivos(self):
-        rows = self.csv("retiros", **self.filtros(estado="observado", desde=self.salida, hasta=self.salida))
-        self.assertEqual({int(row[0]) for row in rows[1:]}, {self.recibido.pk, self.cero.pk})
-        rows = self.csv("recepciones", sede=self.otra.pk, categoria=self.vidrio.pk, estado="conciliado")
-        self.assertEqual([int(row[0]) for row in rows[1:]], [self.otro.pk])
-
-    def test_sin_resultados_no_convierte_pendientes_en_diferencia(self):
-        rows = self.csv("recepciones", **self.filtros(desde=self.salida, hasta=self.salida))
-        self.assertEqual(len(rows), 1)
-        html = self.client.get(reverse("movimientos_imprimible", kwargs={"tipo": "retiros"}), self.filtros(estado="pendiente"))
-        self.assertContains(html, "Sin recepciones")
-        self.assertEqual(html.context["totales"]["confirmadas"], 0)
-
-    def test_filtros_invalidos_no_permiten_exportar(self):
-        for cambios in ({"tipo": "desconocido"}, {"sede": "no"}, {"sede": "999999"},
-                {"categoria": "999999"}, {"estado": "anulado"}, {"desde": "ayer"},
-                {"desde": self.hoy, "hasta": self.salida}):
-            with self.subTest(cambios=cambios):
-                datos = self.filtros(tipo="retiros")
-                datos.update(cambios)
-                centro = self.client.get(reverse("reportes"), datos)
-                self.assertFalse(centro.context["puede_exportar"])
-                self.assertNotContains(centro, ">Descargar CSV</a>")
-                self.assertEqual(self.client.get(reverse("movimientos_csv", kwargs={"tipo": "retiros"}), datos).status_code, 400)
-        self.assertEqual(self.client.get(reverse("reporte_csv"), {"estado": "observado"}).status_code, 400)
-
-    def test_no_acepta_tipo_contradictorio_y_rutas_desconocidas(self):
-        self.assertEqual(self.client.get(reverse("movimientos_imprimible", kwargs={"tipo": "retiros"}), {"tipo": "recepciones"}).status_code, 400)
-        self.assertEqual(self.client.get(reverse("movimientos_csv", kwargs={"tipo": "otro"})).status_code, 404)
-
-    def test_csv_neutraliza_formulas_y_html_escapa_contenido(self):
-        self.recibido.receptor = '=HYPERLINK("url")'
-        self.recibido.documento_ref = "+SUM(1,1)"
-        self.recibido.observacion_recepcion = "<script>alert(1)</script>"
-        self.recibido.save()
-        rows = {int(row[0]): row for row in self.csv("retiros", **self.filtros())[1:]}
-        self.assertTrue(rows[self.recibido.pk][5].startswith("'="))
-        self.assertTrue(rows[self.recibido.pk][10].startswith("'+"))
-        html = self.client.get(reverse("movimientos_imprimible", kwargs={"tipo": "retiros"}), self.filtros())
-        self.assertNotContains(html, "<script>alert(1)</script>")
-        self.assertContains(html, "&lt;script&gt;")
-
-    def test_exportaciones_solo_gerencia_y_solo_lectura(self):
-        for nombre in ("movimientos_csv", "movimientos_imprimible"):
-            url = reverse(nombre, kwargs={"tipo": "retiros"})
-            self.assertEqual(self.client.post(url).status_code, 405)
-            self.client.force_login(self.operario)
-            self.assertEqual(self.client.get(url).status_code, 403)
+    def test_rutas_retiradas_no_permiten_consulta_ni_escritura(self):
+        rutas = ['/gerencia/conciliacion/', '/gerencia/conciliacion/nuevo/',
+            f'/gerencia/conciliacion/{self.recibido.pk}/', f'/gerencia/conciliacion/{self.recibido.pk}/recepcion/',
+            f'/gerencia/conciliacion/{self.recibido.pk}/accion/', f'/gerencia/conciliacion/{self.recibido.pk}/evidencia/',
+            f'/gerencia/conciliacion/evidencias/{EvidenciaRetiro.objects.first().pk}/',
+            '/gerencia/reportes/retiros/csv/', '/gerencia/reportes/recepciones/imprimir/']
+        for usuario in (self.gerente, self.operario, None):
             self.client.logout()
-            self.assertEqual(self.client.get(url).status_code, 302)
-            self.client.force_login(self.gerente)
+            if usuario:
+                self.client.force_login(usuario)
+            for ruta in rutas:
+                with self.subTest(usuario=usuario, ruta=ruta):
+                    self.assertEqual(self.client.get(ruta).status_code, 404)
+                    self.assertEqual(self.client.post(ruta, {'accion':'anular'}).status_code, 404)
+        self.assertEqual(Retiro.objects.count(), 5)
+        self.assertEqual(EvidenciaRetiro.objects.count(), 2)
+        self.recibido.refresh_from_db()
+        self.assertEqual(self.recibido.estado, 'observado')
+
+    def test_navegacion_y_dashboard_sin_modulo(self):
+        for nombre in ('resumen', 'pesajes_gerencia', 'reportes', 'sedes', 'personal'):
+            pagina = self.client.get(reverse(nombre))
+            self.assertEqual(pagina.status_code, 200)
+            for texto in ('Conciliación', 'Mis salidas', '/gerencia/conciliacion/', 'Salidas registradas', 'Confirmado por el receptor'):
+                self.assertNotContains(pagina, texto)
+        pagina = self.client.get(reverse('resumen'), self.filtros())
+        self.assertEqual(pagina.context['totales']['peso'], Decimal('100.00'))
+        self.assertNotIn('salidas', pagina.context)
+        self.client.force_login(self.operario)
+        for nombre in ('registrar', 'historial'):
+            pagina = self.client.get(reverse(nombre))
+            self.assertNotContains(pagina, '>Salidas</a>')
+            self.assertNotContains(pagina, '/gerencia/conciliacion/')
+
+    def test_reportes_solo_generacion_y_sin_selector(self):
+        for tipo in ('retiros', 'recepciones', 'desconocido'):
+            parametros = self.filtros(tipo=tipo)
+            pagina = self.client.get(reverse('reportes'), parametros)
+            self.assertFalse(pagina.context['puede_exportar'])
+            self.assertEqual(self.client.get(reverse('reporte_csv'), parametros).status_code, 400)
+            self.assertEqual(self.client.get(reverse('reporte_imprimible'), parametros).status_code, 400)
+        pagina = self.client.get(reverse('reportes'))
+        self.assertNotContains(pagina, 'Tipo de reporte')
+        self.assertNotContains(pagina, 'Estado del retiro')
+        parametros = self.filtros(tipo='generacion')
+        csv_respuesta = self.client.get(reverse('reporte_csv'), parametros)
+        filas = list(csv.reader(io.StringIO(csv_respuesta.content.decode('utf-8-sig'))))
+        self.assertEqual(filas[1][5], '100.00')
+        html = self.client.get(reverse('reporte_imprimible'), parametros)
+        self.assertEqual(html.context['total'], Decimal('100.00'))

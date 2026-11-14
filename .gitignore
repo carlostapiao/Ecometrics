@@ -1,4 +1,4 @@
-# Secretos y datos privados locales
+# Secretos, estado de infraestructura y datos privados locales
 .env
 .env.*
 !.env.example
@@ -11,6 +11,14 @@ service_account.json
 *.key
 *.pfx
 *.p12
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+backend.hcl
+crash.log
+staticfiles/
 
 # Python y dependencias locales
 __pycache__/

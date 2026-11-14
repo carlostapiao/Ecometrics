@@ -8,7 +8,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from cuentas.models import Sede
-from .models import Categoria, Retiro
+from .models import Categoria
 
 SALT = "ecometrics.pesaje"
 
@@ -96,15 +96,13 @@ class ConsultaPesajesForm(FiltrosForm):
 
 
 class ReporteForm(FiltrosForm):
-    tipo = forms.ChoiceField(required=False, initial="generacion", label="Tipo de reporte", choices=[
-        ("generacion", "Residuos generados"), ("retiros", "Salidas de residuos"), ("recepciones", "Recepciones confirmadas")])
-    sede = forms.ModelChoiceField(queryset=Sede.objects.all(), required=False, empty_label="Todas las sedes")
-    estado = forms.ChoiceField(required=False, label="Estado del retiro", choices=[("", "Todos los estados vigentes")] + [
-        (valor, nombre) for valor, nombre in Retiro.Estado.choices if valor != Retiro.Estado.ANULADO])
+    # Compatibilidad con enlaces anteriores de generación, sin selector de movimientos.
+    tipo = forms.ChoiceField(required=False, widget=forms.HiddenInput, choices=[('generacion', 'Residuos generados')])
+    sede = forms.ModelChoiceField(queryset=Sede.objects.all(), required=False, empty_label='Todas las sedes')
 
     def clean(self):
         datos = super().clean()
-        datos["tipo"] = datos.get("tipo") or "generacion"
-        if datos["tipo"] == "generacion" and datos.get("estado"):
-            self.add_error("estado", "El estado del retiro solo se utiliza en salidas y recepciones.")
+        datos['tipo'] = datos.get('tipo') or 'generacion'
+        if self.data.get('estado'):
+            raise forms.ValidationError('El filtro de estado no corresponde al reporte de generación.')
         return datos

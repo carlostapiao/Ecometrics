@@ -1,6 +1,5 @@
 <a href="{% url 'resumen' %}" {% if seccion == 'dashboard' %}class="activo" aria-current="page"{% endif %}><span aria-hidden="true">▦</span> Dashboard</a>
 <a href="{% url 'sedes' %}" {% if seccion == 'sedes' %}class="activo" aria-current="page"{% endif %}><span aria-hidden="true">⌂</span> Sedes y plantas</a>
 <a href="{% url 'pesajes_gerencia' %}" {% if seccion == 'pesajes' %}class="activo" aria-current="page"{% endif %}><span aria-hidden="true">☷</span> Pesajes</a>
-<a href="{% url 'conciliacion' %}" {% if seccion == 'conciliacion' %}class="activo" aria-current="page"{% endif %}><span aria-hidden="true">⇄</span> Conciliación</a>
 <a href="{% url 'reportes' %}" {% if seccion == 'reportes' %}class="activo" aria-current="page"{% endif %}><span aria-hidden="true">▤</span> Reportes</a>
 <a href="{% url 'personal' %}" {% if seccion == 'personal' %}class="activo" aria-current="page"{% endif %}><span aria-hidden="true">♙</span> Personal</a>
