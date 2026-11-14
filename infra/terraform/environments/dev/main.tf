@@ -74,4 +74,5 @@ module "github_oidc" {
   tfstate_storage_account_id = length(data.azurerm_storage_account.tfstate) > 0 ? data.azurerm_storage_account.tfstate[0].id : ""
   github_repository          = var.github_repository
   github_branch              = var.github_branch
+  github_oidc_subject        = var.github_oidc_subject
 }

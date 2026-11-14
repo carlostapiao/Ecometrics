@@ -62,6 +62,12 @@ variable "github_branch" {
   default     = "main"
 }
 
+variable "github_oidc_subject" {
+  type        = string
+  description = "Subject claim OIDC exacto emitido por GitHub Actions."
+  default     = "repo:carlostapiao@264424726/Ecometrics@1458150944:ref:refs/heads/main"
+}
+
 variable "min_replicas" {
   type        = number
   description = "Réplicas mínimas de Container Apps (0 para ahorrar fuera de demostración)."

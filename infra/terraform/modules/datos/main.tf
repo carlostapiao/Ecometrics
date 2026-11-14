@@ -29,6 +29,10 @@ resource "azurerm_postgresql_flexible_server" "this" {
   geo_redundant_backup_enabled  = false
   public_network_access_enabled = true
   tags                          = var.tags
+
+  lifecycle {
+    ignore_changes = [zone]
+  }
 }
 
 resource "azurerm_postgresql_flexible_server_database" "app" {

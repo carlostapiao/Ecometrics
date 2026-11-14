@@ -21,3 +21,9 @@ variable "github_branch" {
   type    = string
   default = "main"
 }
+
+variable "github_oidc_subject" {
+  type        = string
+  description = "Subject claim OIDC exacto emitido por GitHub Actions (opcional si incluye IDs únicos)."
+  default     = ""
+}

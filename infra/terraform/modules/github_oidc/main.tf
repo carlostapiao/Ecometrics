@@ -14,7 +14,7 @@ resource "azuread_application_federated_identity_credential" "github_branch" {
   description    = "Despliegue CI/CD desde la rama ${var.github_branch} de ${var.github_repository}."
   audiences      = ["api://AzureADTokenExchange"]
   issuer         = "https://token.actions.githubusercontent.com"
-  subject        = "repo:${var.github_repository}:ref:refs/heads/${var.github_branch}"
+  subject        = var.github_oidc_subject != "" ? var.github_oidc_subject : "repo:${var.github_repository}:ref:refs/heads/${var.github_branch}"
 }
 
 resource "azurerm_role_assignment" "rg_contributor" {
