@@ -23,6 +23,12 @@ resource "azurerm_role_assignment" "rg_contributor" {
   principal_id         = azuread_service_principal.github.object_id
 }
 
+resource "azurerm_role_assignment" "rg_user_access_admin" {
+  scope                = var.resource_group_id
+  role_definition_name = "User Access Administrator"
+  principal_id         = azuread_service_principal.github.object_id
+}
+
 resource "azurerm_role_assignment" "tfstate_blob_contributor" {
   count                = var.tfstate_storage_account_id != "" ? 1 : 0
   scope                = var.tfstate_storage_account_id
