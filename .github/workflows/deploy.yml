@@ -126,6 +126,15 @@ jobs:
 
       - name: Actualizar Container App e ingress en puerto 8000
         run: |
+          IDENTITY_ID=$(az containerapp show \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.CONTAINER_APP_NAME }}" \
+            --query "keys(identity.userAssignedIdentities)[0]" -o tsv)
+          az containerapp registry set \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.CONTAINER_APP_NAME }}" \
+            --server "${{ vars.ACR_LOGIN_SERVER }}" \
+            --identity "$IDENTITY_ID"
           az containerapp ingress update \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --name "${{ vars.CONTAINER_APP_NAME }}" \
